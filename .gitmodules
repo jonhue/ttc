@@ -1,0 +1,3 @@
+[submodule "activeft"]
+	path = activeft
+	url = git@github.com:jonhue/activeft.git

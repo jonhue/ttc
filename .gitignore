@@ -1,0 +1,8 @@
+venv
+**/output
+**/evaluation_logs
+**/wandb
+**/outputs
+/TTRL/verl/data/**
+
+__pycache__
