@@ -56,7 +56,7 @@ def make_map_fn(split: str):
             if split == "train" and "achievement_prior" in example.keys():
                 achievement_prior = example.pop("achievement_prior")
             else:
-                achievement_prior = 0
+                achievement_prior = 0.5
 
             data_source = example.pop("dataset")
             elo = example.pop("elo")
@@ -98,24 +98,23 @@ def _map_in_shards(dataset, split: str, num_shards: int, num_proc: int):
     return datasets.concatenate_datasets(processed_shards)
 
 
-def run_proprocessing(data_source, num_proc=4):
+def run_proprocessing(data_source, test_only=False, num_proc=4):
     print(data_source)
-    train_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'train.json'), split='train')
+    if not test_only:
+        train_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'train.json'), split='train')
+        print("Map Datasets")
+        num_shards = 4
+        train_ds = _map_in_shards(train_dataset, "train", num_shards=num_shards, num_proc=num_proc)
+        print(train_ds)
+        out_train = os.path.join(data_source, "train.parquet")
+        write_rowgrouped_large(train_ds, out_train)
     try:
         test_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'test.json'), split='train')
     except:
         test_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'test.json'), split='test')
-
-    print("Map Datasets")
-    num_shards = 4
-    train_ds = _map_in_shards(train_dataset, "train", num_shards=num_shards, num_proc=num_proc)
-    print(train_ds)
     test_ds = _map_in_shards(test_dataset, "test", num_shards=num_shards, num_proc=num_proc)
     print(test_ds)
-
-    out_train = os.path.join(data_source, "train.parquet")
     out_test  = os.path.join(data_source, "test.parquet")
-    write_rowgrouped_large(train_ds, out_train)
     write_rowgrouped_large(test_ds, out_test)
 
 
@@ -126,6 +125,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_source", type=str,
         help="HF dataset name."
+    )
+    parser.add_argument(
+        "--test_only", type=bool,
+        help="Whether to compile test dataset only."
     )
     args = parser.parse_args()
     data_source = args.data_source

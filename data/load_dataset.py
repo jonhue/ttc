@@ -30,7 +30,7 @@ def load_dataset_hf(dataset_name: str,
     if category == "false":
         category = None
 
-    if dataset_name == "lasgroup/ttt_reasoning_dataset":
+    if dataset_name == "lasgroup/verifiable-corpus":
         ds = load_train(category)
     elif dataset_name == "Idavidrein/gpqa-D":
         ds = load_gpqa(category)
@@ -47,7 +47,7 @@ def load_dataset_hf(dataset_name: str,
 
 
     # Common shape across datasets
-    print(len(ds))
+    print(f"Dataset length: {len(ds)}")
     if not "tests" in ds.column_names:
         ds = ds.add_column("tests", ["-"] * len(ds))
     else:
@@ -89,16 +89,6 @@ def load_dataset_hf(dataset_name: str,
             ds=ds_filtered,
             output_path=output_path
         )
-        # ds_filtered.to_json(
-        #     output_path,
-        #     batch_size=15_000,
-        #     num_proc=8,
-        #     lines=False,          # <-- JSON array, not JSONL
-        #     orient="records",     # list of objects
-        #     force_ascii=False,    # optional: keep Unicode chars
-        #     indent=2              # optional: pretty print
-        # )
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
