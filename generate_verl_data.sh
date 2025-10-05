@@ -82,10 +82,12 @@ else
 fi
 
 ### Reload dataset with embeddings
-TTRL_DATASET_DIR="${PYTHONPATH}TTRL/verl/data/$DS_NAME"
+TTRL_DATASET_DIR="$DATA_LOCATION/verl_data/$DS_NAME"
 TTRL_DATASET_TRAIN_PATH="$TTRL_DATASET_DIR/train.json"
 TTRL_DATASET_TEST_PATH="$TTRL_DATASET_DIR/test.json"
 mkdir -p $TTRL_DATASET_DIR
+mkdir -p "${PYTHONPATH}TTRL/verl/data"
+ln -sf "$DATA_LOCATION/verl_data" "${PYTHONPATH}TTRL/verl/data"
 
 if [[ "$OVERWRITE" == "true" || ! -f "$BENCHMARK_PATH" ]]; then
     CMD+="python ${PYTHONPATH}data/load_dataset.py \

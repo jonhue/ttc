@@ -1,9 +1,18 @@
 import os
 import datasets
+from datasets import Value
 import pyarrow as pa
 import pyarrow.parquet as pq
 import argparse
 
+def cast_string_columns_to_large(ds):
+    # Cast every Value("string") column to Value("large_string")
+    if ds.features is None:
+        return ds
+    for col, feat in ds.features.items():
+        if isinstance(feat, Value) and feat.dtype == "string":
+            ds = ds.cast_column(col, Value("large_string"))
+    return ds
 
 def _to_large(field: pa.Field) -> pa.Field:
     t = field.type
@@ -102,8 +111,9 @@ def run_proprocessing(data_source, test_only=False, num_proc=4):
     print(data_source)
     if not test_only:
         train_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'train.json'), split='train')
+        train_dataset = cast_string_columns_to_large(train_dataset)
         print("Map Datasets")
-        num_shards = 4
+        num_shards = 16
         train_ds = _map_in_shards(train_dataset, "train", num_shards=num_shards, num_proc=num_proc)
         print(train_ds)
         out_train = os.path.join(data_source, "train.parquet")
@@ -112,7 +122,7 @@ def run_proprocessing(data_source, test_only=False, num_proc=4):
         test_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'test.json'), split='train')
     except:
         test_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'test.json'), split='test')
-    test_ds = _map_in_shards(test_dataset, "test", num_shards=num_shards, num_proc=num_proc)
+    test_ds = _map_in_shards(test_dataset, "test", num_shards=4, num_proc=num_proc)
     print(test_ds)
     out_test  = os.path.join(data_source, "test.parquet")
     write_rowgrouped_large(test_ds, out_test)
@@ -127,9 +137,9 @@ if __name__ == "__main__":
         help="HF dataset name."
     )
     parser.add_argument(
-        "--test_only", type=bool,
+        "--test_only", action="store_true",
         help="Whether to compile test dataset only."
     )
     args = parser.parse_args()
     data_source = args.data_source
-    run_proprocessing(data_source=data_source)
+    run_proprocessing(data_source=data_source, test_only=args.test_only)
