@@ -1,0 +1,145 @@
+import os
+import datasets
+from datasets import Value
+import pyarrow as pa
+import pyarrow.parquet as pq
+import argparse
+
+def cast_string_columns_to_large(ds):
+    # Cast every Value("string") column to Value("large_string")
+    if ds.features is None:
+        return ds
+    for col, feat in ds.features.items():
+        if isinstance(feat, Value) and feat.dtype == "string":
+            ds = ds.cast_column(col, Value("large_string"))
+    return ds
+
+def _to_large(field: pa.Field) -> pa.Field:
+    t = field.type
+    if pa.types.is_string(t):  return pa.field(field.name, pa.large_string(), field.nullable, field.metadata)
+    if pa.types.is_binary(t):  return pa.field(field.name, pa.large_binary(), field.nullable, field.metadata)
+    if pa.types.is_list(t):    return pa.field(field.name, pa.large_list(_to_large(pa.field("item", t.value_type)).type),
+                                              field.nullable, field.metadata)
+    if pa.types.is_struct(t):  return pa.field(field.name,
+        pa.struct([_to_large(pa.field(f.name, f.type, f.nullable, f.metadata)) for f in t]),
+        field.nullable, field.metadata)
+    return field
+
+
+def _large_schema(schema: pa.Schema) -> pa.Schema:
+    return pa.schema([_to_large(pa.field(f.name, f.type, f.nullable, f.metadata)) for f in schema])
+
+
+def write_rowgrouped_large(ds, path: str, rows_per_group: int = 32):
+    """Cast to LargeString/LargeList and write many small row groups.
+
+    This avoids 32-bit offset overflow in Arrow arrays by casting to
+    LargeString/LargeList and writing smaller row groups.
+    """
+    tbl: pa.Table = ds.data.table
+    tbl = tbl.cast(_large_schema(tbl.schema))  # avoid 32-bit offset overflow
+    # DO NOT combine_chunks() here — we want smaller arrays per row group
+    n = len(tbl)
+    writer = None
+    try:
+        for start in range(0, n, rows_per_group):
+            chunk = tbl.slice(start, min(rows_per_group, n - start))
+            if writer is None:
+                writer = pq.ParquetWriter(path, chunk.schema, compression="zstd")
+            writer.write_table(chunk)
+    finally:
+        if writer is not None:
+            writer.close()
+
+
+def make_map_fn(split: str):
+        def process_fn(example, idx):
+            question = example.pop("prompt")
+            solution = example.pop("answer")
+            global_id = example.pop("idx")
+
+            tests = example.pop("tests")
+            description = example.pop("description")
+            reward_style = example.pop("kind")
+
+            if split == "train" and "achievement_prior" in example.keys():
+                achievement_prior = example.pop("achievement_prior")
+            else:
+                achievement_prior = 0.5
+
+            data_source = example.pop("dataset")
+            elo = example.pop("elo")
+
+            if reward_style == "code":
+                solution = tests
+
+            extra_info = {
+                "split": split,
+                "index": f"{global_id}",
+                "description": description,
+                "problem": question,
+                "elo": elo,
+                "achievement_prior": achievement_prior
+            }
+
+            return {
+                "data_source": data_source,
+                "prompt": [
+                    {
+                        "role": "user",
+                        "content": question,
+                    }
+                ],
+                "ability": reward_style,
+                "reward_model": {"style": reward_style, "ground_truth": solution},
+                "extra_info": extra_info,
+            }
+
+        return process_fn
+
+
+def _map_in_shards(dataset, split: str, num_shards: int, num_proc: int):
+    processed_shards = []
+    for i in range(num_shards):
+        shard = dataset.shard(num_shards=num_shards, index=i)
+        shard = shard.map(function=make_map_fn(split), with_indices=True, num_proc=num_proc)
+        processed_shards.append(shard)
+    return datasets.concatenate_datasets(processed_shards)
+
+
+def run_proprocessing(data_source, test_only=False, num_proc=4):
+    print(data_source)
+    if not test_only:
+        train_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'train.json'), split='train')
+        train_dataset = cast_string_columns_to_large(train_dataset)
+        print("Map Datasets")
+        num_shards = 16
+        train_ds = _map_in_shards(train_dataset, "train", num_shards=num_shards, num_proc=num_proc)
+        print(train_ds)
+        out_train = os.path.join(data_source, "train.parquet")
+        write_rowgrouped_large(train_ds, out_train)
+    try:
+        test_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'test.json'), split='train')
+    except:
+        test_dataset = datasets.load_dataset("json", data_files=os.path.join(data_source, 'test.json'), split='test')
+    test_ds = _map_in_shards(test_dataset, "test", num_shards=4, num_proc=num_proc)
+    print(test_ds)
+    out_test  = os.path.join(data_source, "test.parquet")
+    write_rowgrouped_large(test_ds, out_test)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Produce sorted dataset that can be used for training on most relevant questions."
+    )
+    parser.add_argument(
+        "--data_source", type=str,
+        help="HF dataset name."
+    )
+    parser.add_argument(
+        "--test_only", action="store_true",
+        help="Whether to compile test dataset only."
+    )
+    args = parser.parse_args()
+    data_source = args.data_source
+    run_proprocessing(data_source=data_source, test_only=args.test_only)
