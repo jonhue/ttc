@@ -2,7 +2,7 @@
 
 # Learning on the Job: Test-Time Curricula for Targeted RL
 
-[![Paper](https://img.shields.io/badge/paper-A42C25?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/abs/XXX) [![HF Papers](https://img.shields.io/badge/HF--Paper-%23FFD14D?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/papers/XXX)  [![Github](https://img.shields.io/badge/Code-000000?style=for-the-badge&logo=github&logoColor=000&logoColor=white)](https://github.com/jonhue/ttc) [![Models](https://img.shields.io/badge/Models-%23FFD14D?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/collections/lasgroup/test-time-curricula-for-targeted-rl-68def9ada11db5d6122006f5) [![Data](https://img.shields.io/badge/Data-%23FFD14D?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/datasets/lasgroup/verifiable-corpus) [![W&B Logs](https://img.shields.io/badge/WandB%20Logs-%2300B4AB?style=for-the-badge&logo=weightsandbiases&logoColor=white&labelColor=000000)](https://wandb.ai/jonhue/TTCs/workspace?nw=scwg4fkbwr)
+[![Paper](https://img.shields.io/badge/paper-A42C25?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/pdf/2510.04786) [![HF Papers](https://img.shields.io/badge/HF--Paper-%23FFD14D?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/papers/2510.04786)  [![Github](https://img.shields.io/badge/Code-000000?style=for-the-badge&logo=github&logoColor=000&logoColor=white)](https://github.com/jonhue/ttc) [![Models](https://img.shields.io/badge/Models-%23FFD14D?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/collections/lasgroup/test-time-curricula-for-targeted-rl-68def9ada11db5d6122006f5) [![Data](https://img.shields.io/badge/Data-%23FFD14D?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/datasets/lasgroup/verifiable-corpus) [![W&B Logs](https://img.shields.io/badge/WandB%20Logs-%2300B4AB?style=for-the-badge&logo=weightsandbiases&logoColor=white&labelColor=000000)](https://wandb.ai/jonhue/TTCs/workspace?nw=scwg4fkbwr)
 
 </div>
 
@@ -113,7 +113,7 @@ If you find this work helpful, please cite us.
 	title        = {Learning on the Job: Test-Time Curricula for Targeted Reinforcement Learning},
 	author       = {H{\"u}botter, Jonas and Diaz-Bone, Leander and Hakimi, Ido and Krause, Andreas and Hardt, Moritz},
 	year         = 2025,
-	journal      = {arXiv preprint arXiv:XXX}
+	journal      = {arXiv preprint arXiv:2510.04786}
 }
 
 @inproceedings{hubotter2024efficiently,
